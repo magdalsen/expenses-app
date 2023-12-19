@@ -2,7 +2,7 @@ import { AddExpenseData, AddMonthData, LoginData, SignupData } from "../componen
 import { calculateDateForEachMonth } from "../components/utils/utils";
 import { supabase } from "../supabaseClient";
 
-export const addUser = async (values:SignupData) => {
+export const addUser = async (values:SignupData, toggleAlertSuccess: { (alert: string): void; (arg0: string): void; }, toggleAlertError: { (alert: string): void; (arg0: string): void; }) => {
     const { name, email, password } = values;
     const { data, error } = await supabase.auth.signUp({
         email: email,
@@ -16,22 +16,22 @@ export const addUser = async (values:SignupData) => {
           { id: data.user?.id, name, email }
         ])
         if (error != null) {
-            alert('User already exist.');
+            toggleAlertError('User already exist.')
             throw error;
         };
-        if (userData === null) alert('Success! Account created!');
+        if (userData === null) toggleAlertSuccess('Success! Account created!');
     }
 }
 
-export const loginUser = async (values:LoginData) => {
+export const loginUser = async (values:LoginData, toggleAlertSuccess: { (alert: string): void; (arg0: string): void; }, toggleAlertError: { (alert: string): void; (arg0: string): void; }) => {
     const { email, password } = values;
     const { data, error } = await supabase.auth.signInWithPassword({
         email: email,
         password: password,
     })
-    if (error) alert(`Login error: ${error}`);
+    if (error) toggleAlertError(`Login error: ${error}`);
     if (data.user && data) {
-        alert(`Hello ${email}!`);
+        toggleAlertSuccess(`Hello ${email}!`);
         return data
     }
 }
@@ -58,9 +58,9 @@ export const fetchUserData = async (userId:string) => {
     }
 }
 
-export const addMonth = async (values:AddMonthData, userId: string) => {
+export const addMonth = async (values:AddMonthData, userId: string, toggleAlertSuccess: { (alert: string): void; (arg0: string): void; }, toggleAlertError: { (alert: string): void; (arg0: string): void; }) => {
     const dbData: (string | string[])[] = [];
-    const valuesData = (values.month).concat((values.year).toString());
+    const valuesData = values.month.concat((values.year).toString());
     const { data, error } = await supabase
     .from('income')
     .select('incomeId, monthName, year')
@@ -70,50 +70,51 @@ export const addMonth = async (values:AddMonthData, userId: string) => {
     })
     const check = dbData.includes(valuesData);
     if (check) {
-        alert('Month already exist!');
+        toggleAlertError('Month already exist!');
         return
     } else {
-        const { data2, error2 } = await supabase
+        const { data:data2, error:error2 } = await supabase
             .from('income')
             .insert([
               { id: userId, incomeId: data.length+1, monthIncome: values.income, monthName: values.month, year: values.year }
             ])
             if (error2) throw error2;
-            alert('Month added!');
+            toggleAlertSuccess('Month added!');
             return data2;
     }
 }
 
-export const addExpense = async (values:AddExpenseData, userId: string, idFormat: string | undefined, productLabel: string) => {
+export const addExpense = async (values:AddExpenseData, userId: string, idFormat: string | undefined, productLabel: string, toggleAlertSuccess: { (alert: string): void; (alert: string): void; (arg0: string): void; }, toggleAlertError: { (alert: string): void; (alert: string): void; (arg0: string): any; }) => {
     const { data, error } = await supabase
     .from('expenses')
     .insert({ id: userId, productCategory: values.expense, productPrice: values.price, created_at: calculateDateForEachMonth(idFormat), productLabel: productLabel })
     .select()
-    if (error) throw error;
+    if (error) throw toggleAlertError(`Some error occured: ${error}. Please contact with administrator.`);
     if (data) {
-        alert('Expense added!');
+        toggleAlertSuccess('Expense added!');
+        return data;
     }
 }
 
-export const updateExpense = async (values: AddExpenseData, editExpense: string, id: string | undefined) => {
+export const updateExpense = async (values: AddExpenseData, id: string | undefined, toggleAlertSuccess: { (alert: string): void; (arg0: string): void; }, toggleAlertError: { (alert: string): void; (arg0: string): any; }) => {
     const { data, error } = await supabase
     .from('expenses')
     .update({ productCategory: values.expense, productPrice: values.price })
     .eq('productLabel', id)
     .select()
-    if (error) throw error;
-    console.log(data);
+    if (error) throw toggleAlertError(`Some error occured: ${error}. Please contact with administrator.`);
+    toggleAlertSuccess('Data updated!')
     return data;
 }
 
-export const handleDelete = async (productLabel: string) => {     
+export const handleDelete = async (productLabel: string, toggleAlertSuccess: { (alert: string): void; (alert: string): void; (arg0: string): void; }, toggleAlertError: { (alert: string): void; (alert: string): void; (arg0: string): any; }) => {    
     const { error } = await supabase
     .from('expenses')
     .delete()
     .eq('productLabel', productLabel)
     if (error) {
-        throw error;
+        throw toggleAlertError(`Some error occured: ${error}. Please contact with administrator.`);
     } else {
-        alert('Expense removed!');
+        toggleAlertSuccess('Expense removed!');
     }
 }

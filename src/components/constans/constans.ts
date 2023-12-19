@@ -67,7 +67,7 @@ export const buttonData = {
     editButton: {
         variant: "solid",
         text: "Edit",
-        colorScheme: "blue"
+        colorScheme: "yellow"
     },
     deleteButton: {
         variant: "solid",

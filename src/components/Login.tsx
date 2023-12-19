@@ -9,8 +9,10 @@ import { useUserContext } from "../context/UserContext";
 import { ConfirmButton, SubmitButton } from "./common/Buttons";
 import { InputField } from "./common/Inputs";
 import { buttonData } from "./constans/constans";
+import { useNotificationContext } from "../context/NotificationContext";
 
 export const Login = () => {
+    const { toggleAlertSuccess, toggleAlertError } = useNotificationContext();
     const navigate = useNavigate();
     const { setToken, setId }=useUserContext();
 
@@ -22,7 +24,7 @@ export const Login = () => {
         resolver: yupResolver(schemaLogin)
       });
       const onSubmit = (data: LoginData) => {
-        loginUser(data).then((data)=>{
+        loginUser(data, toggleAlertSuccess, toggleAlertError).then((data)=>{
             setToken(data?.session.access_token);
             setId(data?.user.id);
             navigate('/');

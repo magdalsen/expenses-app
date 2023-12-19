@@ -8,9 +8,10 @@ import { SignupData } from "./constans/types";
 import { BackButton, SubmitButton } from "./common/Buttons";
 import { InputField } from "./common/Inputs";
 import { buttonData } from "./constans/constans";
+import { useNotificationContext } from "../context/NotificationContext";
 
-export const SignUp = () => {
-
+const SignUp = () => {
+    const { toggleAlertSuccess, toggleAlertError } = useNotificationContext();
     const { register, handleSubmit, formState: { errors } } = useForm<SignupData>({
         defaultValues: {
           name: '',
@@ -21,7 +22,7 @@ export const SignUp = () => {
         resolver: yupResolver(schemaSignup)
       });
       const onSubmit = (data: SignupData) => {
-        addUser(data);
+        addUser(data, toggleAlertSuccess, toggleAlertError);
       }
 
       const inputData = {
@@ -65,3 +66,5 @@ export const SignUp = () => {
         </form>
     )
 }
+
+export default SignUp

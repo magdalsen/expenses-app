@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { useUserContext } from "../context/UserContext";
 import { Button, Tab, TabList, TabPanel, TabPanels, Tabs } from "@chakra-ui/react";
 import style from "./LoggedIn.module.css";
@@ -9,17 +8,32 @@ import { fetchDataByRow, fetchUserData } from "../api/api";
 import { ConfirmButton } from "./common/Buttons";
 import { createPureMonthAndYearDataFormat, expensesGetYear, formatDate } from "./utils/utils";
 import { buttonData } from "./constans/constans";
+import { useQuery } from "@tanstack/react-query";
 
 export const LoggedIn = () => {
     const { logOut, userId }=useUserContext();
-    const [income, setIncome] = useState<IncomeData[]>([]);
-    const [years, setYears] = useState<number[]>([]);
-    const [expenses, setExpenses] = useState([]);
+
+    const { data:years, isLoading, error} = useQuery({
+        queryKey: ['years'],
+        queryFn: () => fetchDataByRow(userId).then((data)=>{
+            return formatDate(data)
+        })
+    })
+    const { data:expenses } = useQuery({
+        queryKey: ['expenses'],
+        queryFn: () => fetchDataByRow(userId).then((data)=>{
+            return expensesGetYear(data)
+        })
+    })
+    const { data:income } = useQuery({
+        queryFn: () => fetchUserData(userId),
+        queryKey: ['income']
+    })
 
     const expensesFilter = (year: number, income: IncomeData, sum: number) => {
         return expenses.filter((exp:ExpensesData)=>
                     (exp.created_at).includes(year.toString()) && (exp.created_at).includes(income.monthName)
-                ).map((exp:ExpensesData,i,array)=>{
+                ).map((exp:ExpensesData,i: number,array: string | string[])=>{
                     let expSum = sum += exp.productPrice;
                     return <>
                         {i === array.length-1 ? <>
@@ -33,11 +47,10 @@ export const LoggedIn = () => {
     }
 
     const expensesNullFilter = (year: number, income: IncomeData) => {
-        return expenses.filter((exp:ExpensesData)=>
-                    {
+        return expenses.filter((exp:ExpensesData)=>{
                         return !(createPureMonthAndYearDataFormat(exp)).includes(income.monthName + " " + year.toString())
                     }
-                ).map((_exp:ExpensesData,i,array)=>{
+                ).map((_exp:ExpensesData,i: number,array: string | string[])=>{
                     return (
                         <>
                             <>{i === array.length-1 ? <>
@@ -51,13 +64,12 @@ export const LoggedIn = () => {
                 })
     }
 
-    useEffect(()=>{
-        fetchUserData(userId).then((data)=>setIncome(data));
-        fetchDataByRow(userId).then((data)=>{
-            setYears(formatDate(data));
-            setExpenses(expensesGetYear(data));
-        })
-    },[]);
+    if (isLoading) {
+        return <div>Loading...</div>
+    }
+    if (error) {
+        return <div>Error! Contact with administrator.</div>
+    }
 
     return (
         <>
@@ -67,14 +79,14 @@ export const LoggedIn = () => {
 
             <Tabs variant='enclosed' maxW='800px'>
                 <TabList>
-                    {years.map((year)=>(
+                    {years?.map((year)=>(
                         <Tab>{year}</Tab>
                     ))}
                 </TabList>
                 <TabPanels>
-                {years.map((year)=>(
+                {years?.map((year)=>(
                     <div className={style.expenseBox_container}>
-                        {income.filter((el:IncomeData)=>
+                        {income?.filter((el:IncomeData)=>
                                 el.year === year
                         ).map((income:IncomeData)=>{
                             let sum = 0;

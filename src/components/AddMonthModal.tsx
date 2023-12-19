@@ -1,6 +1,6 @@
 import { Button, FormControl, FormLabel, Input, Modal, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalOverlay, Select, useDisclosure } from "@chakra-ui/react"
 import { yupResolver } from "@hookform/resolvers/yup";
-import React, { useEffect, useState } from "react"
+import React from "react"
 import { useForm } from "react-hook-form";
 import { buttonData, months } from "./constans/constans";
 import { useUserContext } from "../context/UserContext";
@@ -9,11 +9,14 @@ import { addMonth, fetchDataByRow } from "../api/api";
 import { AddMonthData } from "./constans/types";
 import { SaveButton } from "./common/Buttons";
 import { formatDate, todayDate } from "./utils/utils";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNotificationContext } from "../context/NotificationContext";
 
 export const AddMonthModal = () => {
+    const { toggleAlertSuccess, toggleAlertError } = useNotificationContext();
     const { isOpen, onOpen, onClose } = useDisclosure();
     const { userId }=useUserContext();
-    const [years, setYears] = useState<number[]>([]);
+    const queryClient = useQueryClient();
   
     const initialRef = React.useRef(null);
 
@@ -26,12 +29,34 @@ export const AddMonthModal = () => {
         resolver: yupResolver(schemaAddMonth)
       });
       const onSubmit = (data: AddMonthData) => {
-        addMonth(data, userId);
+        mutation.mutate(data);
       }
+      
+    const { data:years, isLoading, error} = useQuery({
+      queryKey: ['years'],
+      queryFn: () => fetchDataByRow(userId).then((data)=>{
+          return formatDate(data)
+      })
+    })
 
-    useEffect(()=>{
-        fetchDataByRow(userId).then((data)=>setYears(formatDate(data)))
-    },[]);
+    const mutation = useMutation({
+      mutationFn: (values:AddMonthData) => {
+        return addMonth(values, userId, toggleAlertSuccess, toggleAlertError)
+      },
+      onSuccess: (values) => {
+        queryClient.invalidateQueries({ queryKey: values })
+      },
+      onError: () => {
+        throw new Error("Something went wrong :(");
+      }
+    })
+
+    if (isLoading) {
+      return <div>Loading...</div>
+    }
+    if (error) {
+      return <div>Error! Contact with administrator.</div>
+    }
 
     return (
       <>
@@ -61,7 +86,7 @@ export const AddMonthModal = () => {
                     <FormControl>
                         <FormLabel>Year:</FormLabel>
                         <Select {...register("year")} placeholder='Select year'>
-                            {years ? years.map((el)=>(
+                            {years?.length !== 0 ? years?.map((el)=>(
                               <option key={el} value={el}>{el}</option>
                             )) :
                             <option key={todayDate} value={todayDate}>{todayDate}</option>}

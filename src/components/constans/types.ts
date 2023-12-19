@@ -19,7 +19,6 @@ export interface IncomeData {
 }
 
 export interface ExpensesData {
-    [x: string]: any;
     created_at: string;
     id: string;
     productCategory: string;
